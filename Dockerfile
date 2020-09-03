@@ -2,6 +2,9 @@ FROM python
 
 RUN pip3 install --upgrade pip
 RUN pip3 install requests
+RUN pip3 install pandas_market_calendars
+RUN pip3 install pandas
+RUN pip3 install scipy
 
 
 #overwrite during build or pass in at runtime
