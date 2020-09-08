@@ -28,6 +28,8 @@ class Market:
 
         trading_days_until_current_expir = list(third_friday['index'])[0]
 
+        self.current_options_friday = current_options_friday
+        self.next_options_friday = next_options_friday
 
         self.trading_days_until_current_expir = trading_days_until_current_expir
 
@@ -44,3 +46,6 @@ class Market:
         # grab the account id
         #account_id = data[0]['securitiesAccount']['accountId']
         return data[symbol]
+
+    def get_put_symbol(self, date, strike):
+        return None

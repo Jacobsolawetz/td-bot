@@ -19,12 +19,19 @@ if __name__ == '__main__':
     trading_days_until_current_expir = current_market.trading_days_until_current_expir
     desired_allocation_pct = desired_current_allocation(int(trading_days_until_current_expir))
 
+    current_positions = current_account.get_positions()
+    current_var, current_var_by_expir = current_account.value_at_risk(current_positions)
+
+    portion_risked = current_var / liquidation_value
+
 
     message = "Subject: Trading Update \n\n" \
         + "Your current account's liquidation value is : " + str(liquidation_value) + "\n\n" \
         + "The SPY is trading at : " + str(spy_price) + ". The VIXY is trading at : " + str(vixy_price) + "\n\n" \
         + "The current monthly options contract will expire in this many trading days: " + str(trading_days_until_current_expir) + "\n\n" \
         + "You should have this much of the portfolio on current contract : " + str(desired_allocation_pct) + "\n\n" \
+        + "You currently have this percentage of portfolio risked: " + str(portion_risked) + " in comparison with the target of 60%" + "\n\n" \
+        + "Your current put exposure is allocated accordingly " + str(current_var_by_expir) +  "\n\n" \
         + "Sincerely,\n" \
         + "K.M.T."
 
