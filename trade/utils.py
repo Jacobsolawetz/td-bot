@@ -20,8 +20,7 @@ def strike_from_delta(S0, T, r, sigma, delta, right):
     return strike
 
 def desired_current_allocation(trading_days_until_current_expir):
-    #roll 1/20 of the portfolio from days 25 to day 5
-    #extra trades on monday OK
+    #roll 1/20 of the portfolio from trade days 25 to day 5
     if trading_days_until_current_expir >= 25:
         return 1.0
     elif trading_days_until_current_expir < 5:
