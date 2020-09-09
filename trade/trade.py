@@ -21,11 +21,12 @@ if __name__ == '__main__':
 
     current_positions = current_account.get_positions()
     current_var, current_var_by_expir = current_account.value_at_risk(current_positions)
+    current_num_contracts, current_num_contracts_by_expir = current_account.get_num_contracts(current_positions)
 
     portion_risked = current_var / liquidation_value
 
 
-    strat = Strategy(current_var, current_var_by_expir, liquidation_value, current_market.current_options_friday, current_market.next_options_friday)
+    strat = Strategy(trading_days_until_current_expir, current_var, current_var_by_expir, liquidation_value, current_market.current_options_friday, current_market.next_options_friday, spy_price, vixy_price)
 
     desired_allocation_pct = strat.desired_current_allocation(int(trading_days_until_current_expir))
     #need to think through rebalance routine

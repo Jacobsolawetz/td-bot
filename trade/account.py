@@ -73,3 +73,21 @@ class Account:
             var_by_expir[expir] = risked - hedged
             total_var += risked - hedged
         return total_var, var_by_expir
+
+    def get_num_contracts(self, positions):
+        expirs = []
+        for pos in positions:
+            #print(pos)
+            expirs.append(pos['expir_date'])
+        unique_expirs = list(set(expirs))
+
+        contracts_by_expir = {}
+        total_contracts = 0
+        for expir in unique_expirs:
+            pos_expir = [p for p in positions if p['expir_date'] == expir]
+            short = 0
+            for expir_p in pos_expir:
+                short += expir_p['shortQuantity']
+            contracts_by_expir[expir] = short
+            total_contracts += short
+        return total_contracts, contracts_by_expir

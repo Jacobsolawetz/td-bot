@@ -7,13 +7,22 @@ from emailer import send_message
 
 
 class Strategy:
-    def __init__(self, current_var, current_var_by_expir, liquidation_value, current_options_friday, next_options_friday):
+    def __init__(self, trading_days_until_current_expir, current_var, current_var_by_expir, liquidation_value, current_options_friday, next_options_friday, spy_price, vix_price):
 
         self.max_loss = 0.6
+        self.leverage = 10
+
+        #the distance between a put spread, is a function of where the spy is, the leverage you want to take, and the max loss
+        #leverage calculated against sold put strike
+        self.options_spread = (spy_price/self.leverage) * self.max_loss
+        self.var_per_contract = self.options_spread * 100
+
+
 
         #current_var: current valuation at risk, float
         #current_var_by_expir: {expir (datetime): value at risk}
         #liquidationValue, value of portoflio at given snapshot, float
+        self.trading_days_until_current_expir = trading_days_until_current_expir
         self.current_var = current_var
         self.current_var_by_expir = current_var_by_expir
         self.liquidation_value = liquidation_value
@@ -63,33 +72,56 @@ class Strategy:
 
         return current_options_var / (current_options_var + next_options_var)
 
+    ####REVISIT####
+    ####probably want to introduce the concept of a "reduced roll" rather than just close
+
     def recommend_action(self, desired_current_allocation, current_allocation_ratio):
         recommendations = []
         if self.current_var / self.liquidation_value < self.max_loss:
-            recommendations.append('increase_var_to_current')
+            recommendations.append('increase_var_to_current: ' + self.increase_var_to_current(amt=0.05))
 
         if current_allocation_ratio > desired_current_allocation:
+            #roll more if we're more out of wack with schedule
+            if current_allocation_ratio - desired_current_allocation > 0.1:
+                amt_to_roll = 0.08
+                amt_to_close = 0.05
+            else:
+                amt_to_roll = 0.05
+                amt_to_close = 0.05
+
             #decide between roll or close
             #10% buffer
             if self.current_var / self.liquidation_value > (self.max_loss + .1):
                 #too much exposure, cut losses and de-risk
-                recommendations.append('close_var_to_current')
+                recommendations.append(self.close_var_to_current(amt=amt_to_close))
             else:
-                recommendations.append('roll_var_to_next')
+                recommendations.append(self.roll_var_to_next(amt=amt_to_roll))
         return recommendations
 
-    def increase_var_to_current(self, amt=.05):
-        #if days to expir > 10: add 5% var to current options contract
-        #else: add 5% var to next contract
-        return None
+    def increase_var_to_current(self, amt=0.05):
+        if int(self.trading_days_until_current_expir) > 10:
+            target_expir = self.current_options_friday
+        else:
+            target_expir = self.next_options_friday
+        target_var_to_increase = self.liquidation_value*amt
+        num_contracts = round(float(target_var_to_increase / self.var_per_contract))
 
-    def close_var_to_current(self, amt=.05):
+        return 'short ' + str(num_contracts) + ' conracts, expiring on ' + str(target_expir) + ' with spread ' + str(self.options_spread)
+
+    def close_var_to_current(self, amt=0.05):
         #close 5% var in current expir
         #need a notion of trade date from order history to close the last contract
         #could use spy direction to infer
-        return None
+        target_var_to_close = self.current_var*amt
+        num_contracts = int(target_var_to_increase / self.var_per_contract)
 
-    def roll_var_to_next(self, amt=.05):
+        return 'close_var_to_current: ' + 'buy back ' + str(num_contracts) + ' contracts, expiring on ' + str(self.current_options_friday)
+
+    def roll_var_to_next(self, amt=0.05):
         #close 5% var in current expir
         #open 5% var in next expir
-        return None
+        target_var_to_roll = self.liquidation_value * amt
+        num_contracts = round(float(target_var_to_roll / self.var_per_contract))
+
+
+        return 'roll_var_to_next: ' + 'roll ' + str(num_contracts) + ' number of contracts to the next month with spread ' + str(self.options_spread)
