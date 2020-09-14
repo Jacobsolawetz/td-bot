@@ -4,13 +4,16 @@ import pandas as pd
 from datetime import date
 import numpy as np
 from emailer import send_message
-
+from execution import Execution
+from utils import calculate_strike
 
 class Strategy:
-    def __init__(self, trading_days_until_current_expir, current_var, current_var_by_expir, liquidation_value, current_options_friday, next_options_friday, spy_price, vix_price):
+    def __init__(self, trading_days_until_current_expir, current_var, current_var_by_expir, liquidation_value, current_options_friday, next_options_friday, spy_price, vix_price, headers):
 
         self.max_loss = 0.6
         self.leverage = 10
+        self.z_score = 2.0
+
 
         #the distance between a put spread, is a function of where the spy is, the leverage you want to take, and the max loss
         #leverage calculated against sold put strike
@@ -28,6 +31,8 @@ class Strategy:
         self.liquidation_value = liquidation_value
         self.current_options_friday = current_options_friday
         self.next_options_friday = next_options_friday
+        self.spy_price = spy_price
+        self.vix_price = vix_price
 
         #check to make sure market calendar logic is working
         for expir in current_var_by_expir.keys():
@@ -44,6 +49,8 @@ class Strategy:
                 send_message(to_email, message)
 
                 raise Exception("market calendar logic failed we sent you a failure email")
+
+        self.execution = Execution(headers)
 
 
         print('initializing short vol strategy')
@@ -78,11 +85,13 @@ class Strategy:
     def recommend_action(self, desired_current_allocation, current_allocation_ratio):
         recommendations = []
         if self.current_var / self.liquidation_value < self.max_loss:
+            #our portfolio has gone up in value, add some exposure
             recommendations.append('increase_var_to_current: ' + self.increase_var_to_current(amt=0.05))
 
         if current_allocation_ratio > desired_current_allocation:
-            #roll more if we're more out of wack with schedule
+            #roll if we're behind schedule
             if current_allocation_ratio - desired_current_allocation > 0.1:
+                #roll a bit more if we're definitley behind
                 amt_to_roll = 0.08
                 amt_to_close = 0.05
             else:
@@ -93,20 +102,34 @@ class Strategy:
             #10% buffer
             if self.current_var / self.liquidation_value > (self.max_loss + .1):
                 #too much exposure, cut losses and de-risk
+                message = "Subject: Too Much Exposure \n\n" \
+                    + "Trading execution script found too much exposure and recommend close" + "\n\n" \
+                    + "If this is the first time this happened, you should check your account and make sure everything is working well" + "\n\n" \
+                    + "Sincerely,\n" \
+                    + "K.M.T."
+                to_email = "jacob@roboflow.ai"
+                send_message(to_email, message)
                 recommendations.append(self.close_var_to_current(amt=amt_to_close))
             else:
                 recommendations.append(self.roll_var_to_next(amt=amt_to_roll))
         return recommendations
 
     def increase_var_to_current(self, amt=0.05):
-        if int(self.trading_days_until_current_expir) > 10:
+        if int(self.trading_days_until_current_expir) > 15:
             target_expir = self.current_options_friday
         else:
             target_expir = self.next_options_friday
         target_var_to_increase = self.liquidation_value*amt
         num_contracts = round(float(target_var_to_increase / self.var_per_contract))
 
-        return 'short ' + str(num_contracts) + ' conracts, expiring on ' + str(target_expir) + ' with spread ' + str(self.options_spread)
+        strike1 = calculate_strike('P', self.spy_price, self.vix_price, self.z_score)
+        strike2 = strike1 - self.options_spread
+        strike1 = int(strike1)
+        strike2 = int(strike2)
+        #trade execution
+        self.execution.short(num_contracts, target_expir, strike1, strike2)
+
+        return 'short ' + str(num_contracts) + ' conracts, expiring on ' + str(target_expir) + ' struck at ' + str(strike1) + ' and ' + str(strike2)
 
     def close_var_to_current(self, amt=0.05):
         #close 5% var in current expir

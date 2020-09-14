@@ -16,7 +16,7 @@ if __name__ == '__main__':
     #example fields
     liquidation_value = current_account.get_liquidation_value()
     spy_price = current_market.quote_symbol(symbol='SPY')['lastPrice']
-    vixy_price = current_market.quote_symbol(symbol='VIXY')['lastPrice']
+    vixy_price = current_market.quote_symbol(symbol='$VIX.X')['lastPrice']
     trading_days_until_current_expir = current_market.trading_days_until_current_expir
 
     current_positions = current_account.get_positions()
@@ -26,7 +26,7 @@ if __name__ == '__main__':
     portion_risked = current_var / liquidation_value
 
 
-    strat = Strategy(trading_days_until_current_expir, current_var, current_var_by_expir, liquidation_value, current_market.current_options_friday, current_market.next_options_friday, spy_price, vixy_price)
+    strat = Strategy(trading_days_until_current_expir, current_var, current_var_by_expir, liquidation_value, current_market.current_options_friday, current_market.next_options_friday, spy_price, vixy_price, headers)
 
     desired_allocation_pct = strat.desired_current_allocation(int(trading_days_until_current_expir))
     #need to think through rebalance routine
@@ -52,5 +52,5 @@ if __name__ == '__main__':
     to_email = "jacob@roboflow.ai"
     send_message(to_email, message)
 
-    to_email = "hannahclingan@gmail.com"
-    send_message(to_email, message)
+    #to_email = "hannahclingan@gmail.com"
+    #send_message(to_email, message)
