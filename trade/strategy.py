@@ -14,13 +14,10 @@ class Strategy:
         self.leverage = 10
         self.z_score = 2.0
 
-
         #the distance between a put spread, is a function of where the spy is, the leverage you want to take, and the max loss
         #leverage calculated against sold put strike
         self.options_spread = (spy_price/self.leverage) * self.max_loss
         self.var_per_contract = self.options_spread * 100
-
-
 
         #current_var: current valuation at risk, float
         #current_var_by_expir: {expir (datetime): value at risk}
@@ -100,7 +97,8 @@ class Strategy:
 
             #decide between roll or close
             #10% buffer
-            if self.current_var / self.liquidation_value > (self.max_loss + .1):
+            #if self.current_var / self.liquidation_value > (self.max_loss + .1):
+            if True:
                 #too much exposure, cut losses and de-risk
                 message = "Subject: Too Much Exposure \n\n" \
                     + "Trading execution script found too much exposure and recommend close" + "\n\n" \
@@ -127,7 +125,7 @@ class Strategy:
         strike1 = int(strike1)
         strike2 = int(strike2)
         #trade execution
-        self.execution.short(num_contracts, target_expir, strike1, strike2)
+        #self.execution.short(num_contracts, target_expir, strike1, strike2)
 
         return 'short ' + str(num_contracts) + ' conracts, expiring on ' + str(target_expir) + ' struck at ' + str(strike1) + ' and ' + str(strike2)
 
@@ -137,6 +135,9 @@ class Strategy:
         #could use spy direction to infer
         target_var_to_close = self.current_var*amt
         num_contracts = int(target_var_to_increase / self.var_per_contract)
+
+        #trade execution
+        #self.execution.close(num_contracts, self.current_options_friday)
 
         return 'close_var_to_current: ' + 'buy back ' + str(num_contracts) + ' contracts, expiring on ' + str(self.current_options_friday)
 
