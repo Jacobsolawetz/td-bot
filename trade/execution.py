@@ -117,6 +117,7 @@ class Execution:
         #assumtpiton, spread orders will always be ordered in pairs, as execution logic executes sequentially by day
         for o in still_open:
 
+            if ((num_contracts == 0) & (current_order['strike1'] != "") & (current_order['strike2'] != "")) :
                 break
 
             o_strike = o['transactionItem']['instrument']['symbol'].split('P')[-1]
@@ -249,6 +250,7 @@ class Execution:
             return 'failure'
 
     def short(self, num_contracts, target_expir, strike1, strike2):
+
         target_expir_str = target_expir.strftime("%m%d%y")
         strike1_symbol = 'SPY_' + target_expir_str + 'P' + str(strike1)
         strike2_symbol = 'SPY_' + target_expir_str + 'P' + str(strike2)
