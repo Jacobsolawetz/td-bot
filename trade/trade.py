@@ -7,7 +7,18 @@ from strategy import Strategy
 
 
 if __name__ == '__main__':
-    headers = refresh_auth()
+    try:
+        headers = refresh_auth()
+    except:
+        print('auth failed')
+
+        message = "Subject: Error in Auth! \n\n" \
+            + "Authentication failed. You probably need to refresh your auth key."
+
+        to_email = "jacob@roboflow.ai"
+        send_message(to_email, message)
+
+
     #set up main classes
     current_account = Account(headers)
     current_market = Market(headers)

@@ -88,7 +88,7 @@ class Strategy:
         if current_allocation_ratio > desired_current_allocation:
             #roll if we're behind schedule
             if current_allocation_ratio - desired_current_allocation > 0.1:
-                #roll a bit more if we're definitley behind
+                #roll a bit more if we're definitively behind
                 amt_to_roll = 0.08
                 amt_to_close = 0.05
             else:
@@ -97,12 +97,13 @@ class Strategy:
 
             #decide between roll or close
             #10% buffer
-            #if self.current_var / self.liquidation_value > (self.max_loss + .1):
-            if True:
+            if self.current_var / self.liquidation_value > (self.max_loss + .1):
                 #too much exposure, cut losses and de-risk
-                message = "Subject: Too Much Exposure \n\n" \
-                    + "Trading execution script found too much exposure and recommend close" + "\n\n" \
-                    + "If this is the first time this happened, you should check your account and make sure everything is working well" + "\n\n" \
+                message = "Subject: Too Much Exposure! \n\n" \
+                    + "Trading execution script found too much exposure and recommend close. " + "\n\n" \
+                    + "If this is the first time this happened, you should check your account and make sure everything is working well. Nothing was executed in the strategy. " + "\n\n" \
+                    + "This recommendation occurs when VAR / liquidation_value > (max_loss + 10%) " + "\n\n" \
+                    + "You considered it an edge case and thought leaving it to manual would be better. " + "\n\n" \
                     + "Sincerely,\n" \
                     + "K.M.T."
                 to_email = "jacob@roboflow.ai"
@@ -127,7 +128,7 @@ class Strategy:
         #trade execution
         #self.execution.short(num_contracts, target_expir, strike1, strike2)
 
-        return 'short ' + str(num_contracts) + ' conracts, expiring on ' + str(target_expir) + ' struck at ' + str(strike1) + ' and ' + str(strike2)
+        return 'short ' + str(num_contracts) + ' contracts, expiring on ' + str(target_expir) + ' struck at ' + str(strike1) + ' and ' + str(strike2)
 
     def close_var_to_current(self, amt=0.05):
         #close 5% var in current expir
@@ -147,5 +148,13 @@ class Strategy:
         target_var_to_roll = self.liquidation_value * amt
         num_contracts = round(float(target_var_to_roll / self.var_per_contract))
 
+        #self.execution.close(num_contracts, self.current_options_friday)
+        target_expir = self.next_options_friday
+        strike1 = calculate_strike('P', self.spy_price, self.vix_price, self.z_score)
+        strike2 = strike1 - self.options_spread
+        strike1 = int(strike1)
+        strike2 = int(strike2)
 
-        return 'roll_var_to_next: ' + 'roll ' + str(num_contracts) + ' number of contracts to the next month with spread ' + str(self.options_spread)
+        #self.execution.short(num_contracts, target_expir, strike1, strike2)
+
+        return 'roll_var_to_next: ' + 'roll ' + str(num_contracts) + ' number of contracts from ' + str(self.current_options_friday) + ' to ' + str(self.next_options_friday) + ' with spread ' + str(self.options_spread)
