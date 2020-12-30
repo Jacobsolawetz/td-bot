@@ -57,7 +57,7 @@ class Execution:
         }
 
         # make a post, NOTE WE'VE CHANGED DATA TO JSON AND ARE USING POST
-        content = requests.get(url = endpoint, json = payload, headers = header)
+        content = requests.get(url = endpoint, json = payload, headers = self.headers)
         transactions = content.json()
 
         opening = []
@@ -117,7 +117,6 @@ class Execution:
         #assumtpiton, spread orders will always be ordered in pairs, as execution logic executes sequentially by day
         for o in still_open:
 
-            if num_contracts == 0:
                 break
 
             o_strike = o['transactionItem']['instrument']['symbol'].split('P')[-1]
@@ -187,7 +186,7 @@ class Execution:
                 #lack of liquidity
                 message = "Subject: Lack of Liquidity \n\n" \
                     + "Bid ask spread for one of the contracts to be traded exceeded .02, aborting trade for now" + "\n\n" \
-                    + "target_expir " + str(target_expir) + 'strike ' + str(strike1) + ' strike2 ' + str(strike2) + "\n\n" \
+                    + "target_expir " + str(target_expir_str) + 'strike ' + str(strike1_symbol) + ' strike2 ' + str(strike2_symbol) + "\n\n" \
                     + "If this is the first time this happened, you should check your account and make sure everything is working well" + "\n\n" \
                     + "Sincerely,\n" \
                     + "K.M.T."
@@ -236,8 +235,17 @@ class Execution:
                     sell_result = self.place_order(payload)
                     if buy_result.status_code in [200, 201]:
                         print('close successful')
+
+                        message = "Subject: Purchase Executed: " + str(num_contracts) + " Number of Contracts" + "\n\n" \
+                            + "" + "\n\n" \
+                            + "target_expir " + str(target_expir_str) + 'strike ' + str(strike1_symbol) + ' strike2 ' + str(strike2_symbol) + "\n\n" \
+                            + "Sincerely,\n" \
+                            + "K.M.T."
+                        to_email = "jacob@roboflow.ai"
+
                         return 'success'
 
+            print('close failed ')
             return 'failure'
 
     def short(self, num_contracts, target_expir, strike1, strike2):
@@ -252,7 +260,7 @@ class Execution:
             #lack of liquidity
             message = "Subject: Lack of Liquidity \n\n" \
                 + "Bid ask spread for one of the contracts to be traded exceeded .02, aborting trade for now" + "\n\n" \
-                + "target_expir " + str(target_expir) + 'strike ' + str(strike1) + ' strike2 ' + str(strike2) + "\n\n" \
+                + "target_expir " + str(target_expir) + ' strike1 ' + str(strike1) + ' strike2 ' + str(strike2) + "\n\n" \
                 + "If this is the first time this happened, you should check your account and make sure everything is working well" + "\n\n" \
                 + "Sincerely,\n" \
                 + "K.M.T."
@@ -301,6 +309,14 @@ class Execution:
                 sell_result = self.place_order(payload)
                 if buy_result.status_code in [200, 201]:
                     print('short successful')
+                    message = "Subject: Short Executed: " + str(num_contracts) + " Number of Contracts" + "\n\n" \
+                        + "" + "\n\n" \
+                        + "target_expir " + str(target_expir_str) + ' strike1 ' + str(strike1) + ' strike2 ' + str(strike2) + "\n\n" \
+                        + "Sincerely,\n" \
+                        + "K.M.T."
+                    to_email = "jacob@roboflow.ai"
+                    send_message(to_email, message)
+
                     return 'success'
 
             return 'failure'

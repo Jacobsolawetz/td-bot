@@ -108,7 +108,7 @@ class Strategy:
                     + "K.M.T."
                 to_email = "jacob@roboflow.ai"
                 send_message(to_email, message)
-                recommendations.append(self.close_var_to_current(amt=amt_to_close))
+                #recommendations.append(self.close_var_to_current(amt=amt_to_close))
             else:
                 recommendations.append(self.roll_var_to_next(amt=amt_to_roll))
         return recommendations
@@ -126,7 +126,7 @@ class Strategy:
         strike1 = int(strike1)
         strike2 = int(strike2)
         #trade execution
-        #self.execution.short(num_contracts, target_expir, strike1, strike2)
+        self.execution.short(num_contracts, target_expir, strike1, strike2)
 
         return 'short ' + str(num_contracts) + ' contracts, expiring on ' + str(target_expir) + ' struck at ' + str(strike1) + ' and ' + str(strike2)
 
@@ -138,7 +138,7 @@ class Strategy:
         num_contracts = int(target_var_to_increase / self.var_per_contract)
 
         #trade execution
-        #self.execution.close(num_contracts, self.current_options_friday)
+        self.execution.close(num_contracts, self.current_options_friday)
 
         return 'close_var_to_current: ' + 'buy back ' + str(num_contracts) + ' contracts, expiring on ' + str(self.current_options_friday)
 
@@ -148,13 +148,13 @@ class Strategy:
         target_var_to_roll = self.liquidation_value * amt
         num_contracts = round(float(target_var_to_roll / self.var_per_contract))
 
-        #self.execution.close(num_contracts, self.current_options_friday)
+        self.execution.close(num_contracts, self.current_options_friday)
         target_expir = self.next_options_friday
         strike1 = calculate_strike('P', self.spy_price, self.vix_price, self.z_score)
         strike2 = strike1 - self.options_spread
         strike1 = int(strike1)
         strike2 = int(strike2)
 
-        #self.execution.short(num_contracts, target_expir, strike1, strike2)
+        self.execution.short(num_contracts, target_expir, strike1, strike2)
 
         return 'roll_var_to_next: ' + 'roll ' + str(num_contracts) + ' number of contracts from ' + str(self.current_options_friday) + ' to ' + str(self.next_options_friday) + ' with spread ' + str(self.options_spread)
