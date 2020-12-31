@@ -35,6 +35,181 @@ class Execution:
 
         return content
 
+    def get_num_open_contracts_current(target_expir):
+        endpoint = r"https://api.tdameritrade.com/v1/accounts/{}/transactions".format(account_id)
+
+        # define the payload, in JSON format
+        payload = {
+          "type": "TRADE"
+        }
+
+        # make a post, NOTE WE'VE CHANGED DATA TO JSON AND ARE USING POST
+        content = requests.get(url = endpoint, json = payload, headers = self.headers)
+
+        transactions = content.json()
+        #total open current contracts
+        from dateutil import parser
+
+        #symbol_start = 'SPY_091820P'
+        target_expir_str = target_expir.strftime("%m%d%y")
+        symbol_start = 'SPY_' + target_expir_str + 'P'
+
+        opening = []
+        closing = []
+        for t in transactions:
+            if 'instrument' in t['transactionItem']:
+                if 'symbol' in t['transactionItem']['instrument']:
+                    if t['transactionItem']['instrument']['symbol'].startswith(symbol_start):
+                        if t['transactionItem']['positionEffect'] == 'OPENING':
+                            opening.append(t)
+                        if t['transactionItem']['positionEffect'] == 'CLOSING':
+                            closing.append(t)
+
+        #subtract closing trades from the open contracts
+        for o in opening:
+            for c in closing:
+                if o['transactionItem']['instrument']['symbol'] == c['transactionItem']['instrument']['symbol']:
+                    if o['transactionItem']['instruction'] != c['transactionItem']['instruction']:
+                        #need some date logic
+                        #then the position has been closed by some amount
+                        o_date = parser.parse(o['transactionDate'])
+                        c_date = parser.parse(c['transactionDate'])
+
+                        o_strike = o['transactionItem']['instrument']['symbol'].split('P')[-1]
+                        c_strike = c['transactionItem']['instrument']['symbol'].split('P')[-1]
+
+                        o_amount = o['transactionItem']['amount']
+                        c_amount = c['transactionItem']['amount']
+
+                        if (c_date > o_date) & (o_strike == c_strike) & (o_amount > 0) & (c_amount > 0):
+                          if c_amount > o_amount:
+                            o['transactionItem']['amount'] -= o_amount
+                            c_date['transactionItem']['amount'] -= o_amount
+                          else:
+                            o['transactionItem']['amount'] -= c_amount
+                            c['transactionItem']['amount'] -= c_amount
+
+        still_open = []
+
+        for o in opening:
+            if o['transactionItem']['amount'] > 0:
+                still_open.append(o)
+
+        still_open_amount = 0
+        for o in still_open:
+            if o['transactionItem']['instruction'] == 'SELL':
+                still_open_amount += o['transactionItem']['amount']
+
+
+        return still_open_amount
+
+    def get_num_opened_contracts_current(target_expir):
+        endpoint = r"https://api.tdameritrade.com/v1/accounts/{}/transactions".format(account_id)
+
+        # define the payload, in JSON format
+        payload = {
+          "type": "TRADE"
+        }
+
+        # make a post, NOTE WE'VE CHANGED DATA TO JSON AND ARE USING POST
+        content = requests.get(url = endpoint, json = payload, headers = self.headers)
+
+        transactions = content.json()
+        #total open current contracts
+        from dateutil import parser
+
+        #symbol_start = 'SPY_091820P'
+        target_expir_str = target_expir.strftime("%m%d%y")
+        symbol_start = 'SPY_' + target_expir_str + 'P'
+
+        opening = []
+        closing = []
+        for t in transactions:
+            if 'instrument' in t['transactionItem']:
+                if 'symbol' in t['transactionItem']['instrument']:
+                    if t['transactionItem']['instrument']['symbol'].startswith(symbol_start):
+                        if t['transactionItem']['positionEffect'] == 'OPENING':
+                            opening.append(t)
+                        if t['transactionItem']['positionEffect'] == 'CLOSING':
+                            closing.append(t)
+
+        open_amount = 0
+        for o in opening:
+            if o['transactionItem']['instruction'] == 'SELL':
+                open_amount += o['transactionItem']['amount']
+
+        return open_amount
+
+
+    def get_var_opened_to_next(target_expir):
+        endpoint = r"https://api.tdameritrade.com/v1/accounts/{}/transactions".format(account_id)
+
+        # define the payload, in JSON format
+        payload = {
+          "type": "TRADE"
+        }
+
+        # make a post, NOTE WE'VE CHANGED DATA TO JSON AND ARE USING POST
+        content = requests.get(url = endpoint, json = payload, headers = self.headers)
+
+        transactions = content.json()
+        #total open current contracts
+        from dateutil import parser
+
+        #symbol_start = 'SPY_091820P'
+        target_expir_str = target_expir.strftime("%m%d%y")
+        symbol_start = 'SPY_' + target_expir_str + 'P'
+
+        opening = []
+        closing = []
+        for t in transactions:
+            if 'instrument' in t['transactionItem']:
+                if 'symbol' in t['transactionItem']['instrument']:
+                    if t['transactionItem']['instrument']['symbol'].startswith(symbol_start):
+                        if t['transactionItem']['positionEffect'] == 'OPENING':
+                            opening.append(t)
+                        if t['transactionItem']['positionEffect'] == 'CLOSING':
+                            closing.append(t)
+        #subtract closing trades from the open contracts
+        for o in opening:
+            for c in closing:
+                if o['transactionItem']['instrument']['symbol'] == c['transactionItem']['instrument']['symbol']:
+                    if o['transactionItem']['instruction'] != c['transactionItem']['instruction']:
+                        #need some date logic
+                        #then the position has been closed by some amount
+                        o_date = parser.parse(o['transactionDate'])
+                        c_date = parser.parse(c['transactionDate'])
+
+                        o_strike = o['transactionItem']['instrument']['symbol'].split('P')[-1]
+                        c_strike = c['transactionItem']['instrument']['symbol'].split('P')[-1]
+
+                        o_amount = o['transactionItem']['amount']
+                        c_amount = c['transactionItem']['amount']
+
+                        if (c_date > o_date) & (o_strike == c_strike) & (o_amount > 0) & (c_amount > 0):
+                          if c_amount > o_amount:
+                            o['transactionItem']['amount'] -= o_amount
+                            c_date['transactionItem']['amount'] -= o_amount
+                          else:
+                            o['transactionItem']['amount'] -= c_amount
+                            c['transactionItem']['amount'] -= c_amount
+
+        still_open = []
+
+        for o in opening:
+            if o['transactionItem']['amount'] > 0:
+                still_open.append(o)
+
+        var_amount = 0
+        for o in still_open:
+            o_strike = int(o['transactionItem']['instrument']['symbol'].split('P')[-1])
+            if o['transactionItem']['instruction'] == 'SELL':
+                var_amount += o_strike * 100 * o['transactionItem']['amount']
+            if o['transactionItem']['instruction'] == 'BUY':
+                var_amount -= o_strike * 100 * o['transactionItem']['amount']
+
+        return var_amount
+
     def get_close_orders(self, symbol_start, num_contracts):
         ####
         #returns list of positions to close for symbol number of contracts

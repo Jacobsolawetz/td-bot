@@ -44,7 +44,9 @@ if __name__ == '__main__':
     #is it based on notional or market value. What happens when liquidation_value tanks, do you still roll, how to calculate algorithmically.
     #back tester is just rolling a single put, returns multiply on portfolio base value, so it would roll "less of a put"
     current_allocation_ratio = strat.calculate_current_allocation_ratio()
-    recommendation = strat.recommend_action(desired_allocation_pct, current_allocation_ratio)
+
+    #this is where trade execution happens
+    recommendation = strat.recommend_action(int(trading_days_until_current_expir))
 
 
 

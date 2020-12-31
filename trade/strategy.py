@@ -49,6 +49,14 @@ class Strategy:
 
         self.execution = Execution(headers)
 
+        self.num_open_contracts_current = self.execution.get_num_open_contracts_current(self.current_options_friday)
+        self.num_opened_contracts_current = self.execution.get_num_opened_contracts_current(self.current_options_friday)
+        self.num_closed_contracts_current = self.num_opened_contracts_current - self.num_open_contracts_current
+
+        self.var_opened_to_next = self.execution.get_var_opened_to_next(self.next_options_friday)
+
+
+        print('printing new variables ', self.num_open_contracts_current, self.num_opened_contracts_current, self.num_closed_contracts_current, self.var_opened_to_next)
 
         print('initializing short vol strategy')
 
@@ -79,38 +87,43 @@ class Strategy:
     ####REVISIT####
     ####probably want to introduce the concept of a "reduced roll" rather than just close
 
-    def recommend_action(self, desired_current_allocation, current_allocation_ratio):
+    def recommend_action(self, trading_days_until_current_expir):
         recommendations = []
-        if self.current_var / self.liquidation_value < self.max_loss:
-            #our portfolio has gone up in value, add some exposure
-            recommendations.append('increase_var_to_current: ' + self.increase_var_to_current(amt=0.05))
 
-        if current_allocation_ratio > desired_current_allocation:
-            #roll if we're behind schedule
-            if current_allocation_ratio - desired_current_allocation > 0.1:
-                #roll a bit more if we're definitively behind
-                amt_to_roll = 0.08
-                amt_to_close = 0.05
-            else:
-                amt_to_roll = 0.05
-                amt_to_close = 0.05
+        num_to_close = (self.num_open_contracts_current /
 
-            #decide between roll or close
-            #10% buffer
-            if self.current_var / self.liquidation_value > (self.max_loss + .1):
-                #too much exposure, cut losses and de-risk
-                message = "Subject: Too Much Exposure! \n\n" \
-                    + "Trading execution script found too much exposure and recommend close. " + "\n\n" \
-                    + "If this is the first time this happened, you should check your account and make sure everything is working well. Nothing was executed in the strategy. " + "\n\n" \
-                    + "This recommendation occurs when VAR / liquidation_value > (max_loss + 10%) " + "\n\n" \
-                    + "You considered it an edge case and thought leaving it to manual would be better. " + "\n\n" \
-                    + "Sincerely,\n" \
-                    + "K.M.T."
-                to_email = "jacob@roboflow.ai"
-                send_message(to_email, message)
-                #recommendations.append(self.close_var_to_current(amt=amt_to_close))
-            else:
-                recommendations.append(self.roll_var_to_next(amt=amt_to_roll))
+
+
+        # if self.current_var / self.liquidation_value < self.max_loss:
+        #     #our portfolio has gone up in value, add some exposure
+        #     recommendations.append('increase_var_to_current: ' + self.increase_var_to_current(amt=0.05))
+        #
+        # if current_allocation_ratio > desired_current_allocation:
+        #     #roll if we're behind schedule
+        #     if current_allocation_ratio - desired_current_allocation > 0.1:
+        #         #roll a bit more if we're definitively behind
+        #         amt_to_roll = 0.08
+        #         amt_to_close = 0.05
+        #     else:
+        #         amt_to_roll = 0.05
+        #         amt_to_close = 0.05
+        #
+        #     #decide between roll or close
+        #     #10% buffer
+        #     if self.current_var / self.liquidation_value > (self.max_loss + .1):
+        #         #too much exposure, cut losses and de-risk
+        #         message = "Subject: Too Much Exposure! \n\n" \
+        #             + "Trading execution script found too much exposure and recommend close. " + "\n\n" \
+        #             + "If this is the first time this happened, you should check your account and make sure everything is working well. Nothing was executed in the strategy. " + "\n\n" \
+        #             + "This recommendation occurs when VAR / liquidation_value > (max_loss + 10%) " + "\n\n" \
+        #             + "You considered it an edge case and thought leaving it to manual would be better. " + "\n\n" \
+        #             + "Sincerely,\n" \
+        #             + "K.M.T."
+        #         to_email = "jacob@roboflow.ai"
+        #         send_message(to_email, message)
+        #         #recommendations.append(self.close_var_to_current(amt=amt_to_close))
+        #     else:
+        #         recommendations.append(self.roll_var_to_next(amt=amt_to_roll))
         return recommendations
 
     def increase_var_to_current(self, amt=0.05):
@@ -126,21 +139,21 @@ class Strategy:
         strike1 = int(strike1)
         strike2 = int(strike2)
         #trade execution
-        self.execution.short(num_contracts, target_expir, strike1, strike2)
+        #self.execution.short(num_contracts, target_expir, strike1, strike2)
 
         return 'short ' + str(num_contracts) + ' contracts, expiring on ' + str(target_expir) + ' struck at ' + str(strike1) + ' and ' + str(strike2)
 
-    def close_var_to_current(self, amt=0.05):
-        #close 5% var in current expir
-        #need a notion of trade date from order history to close the last contract
-        #could use spy direction to infer
-        target_var_to_close = self.current_var*amt
-        num_contracts = int(target_var_to_increase / self.var_per_contract)
-
-        #trade execution
-        self.execution.close(num_contracts, self.current_options_friday)
-
-        return 'close_var_to_current: ' + 'buy back ' + str(num_contracts) + ' contracts, expiring on ' + str(self.current_options_friday)
+    # def close_var_to_current(self, amt=0.05):
+    #     #close 5% var in current expir
+    #     #need a notion of trade date from order history to close the last contract
+    #     #could use spy direction to infer
+    #     target_var_to_close = self.current_var*amt
+    #     num_contracts = int(target_var_to_increase / self.var_per_contract)
+    #
+    #     #trade execution
+    #     self.execution.close(num_contracts, self.current_options_friday)
+    #
+    #     return 'close_var_to_current: ' + 'buy back ' + str(num_contracts) + ' contracts, expiring on ' + str(self.current_options_friday)
 
     def roll_var_to_next(self, amt=0.05):
         #close 5% var in current expir
@@ -148,13 +161,13 @@ class Strategy:
         target_var_to_roll = self.liquidation_value * amt
         num_contracts = round(float(target_var_to_roll / self.var_per_contract))
 
-        self.execution.close(num_contracts, self.current_options_friday)
+        #self.execution.close(num_contracts, self.current_options_friday)
         target_expir = self.next_options_friday
         strike1 = calculate_strike('P', self.spy_price, self.vix_price, self.z_score)
         strike2 = strike1 - self.options_spread
         strike1 = int(strike1)
         strike2 = int(strike2)
 
-        self.execution.short(num_contracts, target_expir, strike1, strike2)
+        #self.execution.short(num_contracts, target_expir, strike1, strike2)
 
         return 'roll_var_to_next: ' + 'roll ' + str(num_contracts) + ' number of contracts from ' + str(self.current_options_friday) + ' to ' + str(self.next_options_friday) + ' with spread ' + str(self.options_spread)
