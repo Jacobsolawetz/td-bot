@@ -26,6 +26,8 @@ class Market:
         current_options_friday = list(third_friday['date'])[0].to_pydatetime()
         next_options_friday = list(third_friday['date'])[1].to_pydatetime()
 
+        self.is_trading_day = today in list(schedule['date'])
+
         trading_days_until_current_expir = list(third_friday['index'])[0]
 
         self.current_options_friday = current_options_friday

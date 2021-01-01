@@ -8,6 +8,17 @@ from emailer import send_message
 class Execution:
     def __init__(self, headers):
         self.headers = headers
+
+        endpoint = r"https://api.tdameritrade.com/v1/accounts"
+        #payload = {'fields':'positions'}
+        # make a request
+        content = requests.get(url = endpoint, headers = self.headers)
+        # convert it dictionary object
+        data = content.json()
+        account_id = data[0]['securitiesAccount']['accountId']
+
+        self.account_id = account_id
+
         print('execution class initialized ')
 
     def get_quote(self, symbol):
@@ -21,22 +32,15 @@ class Execution:
         return data[symbol]
 
     def place_order(self, order_specs):
-        endpoint = r"https://api.tdameritrade.com/v1/accounts"
-        #payload = {'fields':'positions'}
-        # make a request
-        content = requests.get(url = endpoint, headers = self.headers)
-        # convert it dictionary object
-        data = content.json()
-        account_id = data[0]['securitiesAccount']['accountId']
 
-        endpoint = r"https://api.tdameritrade.com/v1/accounts/{}/orders".format(account_id)
+        endpoint = r"https://api.tdameritrade.com/v1/accounts/{}/orders".format(self.account_id)
 
         content = requests.post(url = endpoint, json = order_specs, headers = self.headers)
 
         return content
 
-    def get_num_open_contracts_current(target_expir):
-        endpoint = r"https://api.tdameritrade.com/v1/accounts/{}/transactions".format(account_id)
+    def get_num_open_contracts_current(self, target_expir):
+        endpoint = r"https://api.tdameritrade.com/v1/accounts/{}/transactions".format(self.account_id)
 
         # define the payload, in JSON format
         payload = {
@@ -103,8 +107,8 @@ class Execution:
 
         return still_open_amount
 
-    def get_num_opened_contracts_current(target_expir):
-        endpoint = r"https://api.tdameritrade.com/v1/accounts/{}/transactions".format(account_id)
+    def get_num_opened_contracts_current(self, target_expir):
+        endpoint = r"https://api.tdameritrade.com/v1/accounts/{}/transactions".format(self.account_id)
 
         # define the payload, in JSON format
         payload = {
@@ -141,8 +145,8 @@ class Execution:
         return open_amount
 
 
-    def get_var_opened_to_next(target_expir):
-        endpoint = r"https://api.tdameritrade.com/v1/accounts/{}/transactions".format(account_id)
+    def get_var_opened_to_next(self, target_expir):
+        endpoint = r"https://api.tdameritrade.com/v1/accounts/{}/transactions".format(self.account_id)
 
         # define the payload, in JSON format
         payload = {
@@ -214,17 +218,7 @@ class Execution:
         ####
         #returns list of positions to close for symbol number of contracts
         ####
-
-        endpoint = r"https://api.tdameritrade.com/v1/accounts"
-        #payload = {'fields':'positions'}
-        # make a request
-        content = requests.get(url = endpoint, headers = self.headers)
-        # convert it dictionary object
-        data = content.json()
-        # grab the account id
-        account_id = data[0]['securitiesAccount']['accountId']
-
-        endpoint = r"https://api.tdameritrade.com/v1/accounts/{}/transactions".format(account_id)
+        endpoint = r"https://api.tdameritrade.com/v1/accounts/{}/transactions".format(self.account_id)
 
         # define the payload, in JSON format
         payload = {

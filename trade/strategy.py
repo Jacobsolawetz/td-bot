@@ -10,8 +10,8 @@ from utils import calculate_strike
 class Strategy:
     def __init__(self, trading_days_until_current_expir, current_var, current_var_by_expir, liquidation_value, current_options_friday, next_options_friday, spy_price, vix_price, headers):
 
-        self.max_loss = 0.6
-        self.leverage = 10
+        self.max_loss = 0.7
+        self.leverage = 12
         self.z_score = 2.0
 
         #the distance between a put spread, is a function of where the spy is, the leverage you want to take, and the max loss
@@ -55,119 +55,64 @@ class Strategy:
 
         self.var_opened_to_next = self.execution.get_var_opened_to_next(self.next_options_friday)
 
-
         print('printing new variables ', self.num_open_contracts_current, self.num_opened_contracts_current, self.num_closed_contracts_current, self.var_opened_to_next)
 
         print('initializing short vol strategy')
 
-    def desired_current_allocation(self, trading_days_until_current_expir):
-        #roll 1/20 of the portfolio from trade days 25 to day 5
-        if trading_days_until_current_expir >= 25:
-            return 1.0
-        elif trading_days_until_current_expir < 5:
-            return 0.0
-        else:
-            return float((trading_days_until_current_expir - 5) / 20)
-
-    def calculate_current_allocation_ratio(self):
-        #calculates based on the currrent value at risk for each of the next expirations
-
-        if self.current_options_friday in self.current_var_by_expir.keys():
-            current_options_var = self.current_var_by_expir[self.current_options_friday]
-        else:
-            current_options_var = 0
-
-        if self.next_options_friday in self.current_var_by_expir.keys():
-            next_options_var = self.current_var_by_expir[self.next_options_friday]
-        else:
-            next_options_var = 0
-
-        return current_options_var / (current_options_var + next_options_var)
-
-    ####REVISIT####
-    ####probably want to introduce the concept of a "reduced roll" rather than just close
-
     def recommend_action(self, trading_days_until_current_expir):
         recommendations = []
 
-        num_to_close = (self.num_open_contracts_current /
+        if trading_days_until_current_expir > 20:
+            recommendations.append('nothing to do, more than 20 trading days from current expir')
+            return recommendations
 
+        elif trading_days_until_current_expir > 5:
+            ##roll logic
+            #close logic
+            num_to_close = round(float((self.num_open_contracts_current / (trading_days_until_current_expir - 5))))
+            if num_to_close > 0:
+                recommendations.append(self.close(num_to_close, self.current_options_friday))
+            #open logic
+            pct_current_closed = float((num_to_close + self.num_closed_contracts_current) / self.num_opened_contracts_current)
+            #we should have this much value at risk on the next contract
+            var_to_open = float((pct_current_closed * self.max_loss * self.liquidation_value) - self.var_opened_to_next)
 
+            num_to_open = round(float(var_to_open / self.var_per_contract))
+            if num_to_open > 0:
+                recommendations.append(self.open(num_to_open, self.next_options_friday))
+        else:
+            #next roll health check, in the few days before current contracts would expire
+            if self.num_open_contracts_current > 0:
+                recommendations.append(self.close(self.num_open_contracts_current, self.current_options_friday))
 
-        # if self.current_var / self.liquidation_value < self.max_loss:
-        #     #our portfolio has gone up in value, add some exposure
-        #     recommendations.append('increase_var_to_current: ' + self.increase_var_to_current(amt=0.05))
-        #
-        # if current_allocation_ratio > desired_current_allocation:
-        #     #roll if we're behind schedule
-        #     if current_allocation_ratio - desired_current_allocation > 0.1:
-        #         #roll a bit more if we're definitively behind
-        #         amt_to_roll = 0.08
-        #         amt_to_close = 0.05
-        #     else:
-        #         amt_to_roll = 0.05
-        #         amt_to_close = 0.05
-        #
-        #     #decide between roll or close
-        #     #10% buffer
-        #     if self.current_var / self.liquidation_value > (self.max_loss + .1):
-        #         #too much exposure, cut losses and de-risk
-        #         message = "Subject: Too Much Exposure! \n\n" \
-        #             + "Trading execution script found too much exposure and recommend close. " + "\n\n" \
-        #             + "If this is the first time this happened, you should check your account and make sure everything is working well. Nothing was executed in the strategy. " + "\n\n" \
-        #             + "This recommendation occurs when VAR / liquidation_value > (max_loss + 10%) " + "\n\n" \
-        #             + "You considered it an edge case and thought leaving it to manual would be better. " + "\n\n" \
-        #             + "Sincerely,\n" \
-        #             + "K.M.T."
-        #         to_email = "jacob@roboflow.ai"
-        #         send_message(to_email, message)
-        #         #recommendations.append(self.close_var_to_current(amt=amt_to_close))
-        #     else:
-        #         recommendations.append(self.roll_var_to_next(amt=amt_to_roll))
+            target_var = float((self.max_loss * self.liquidation_value))
+            var_difference_from_target = (self.var_opened_to_next) - target_var
+            if (float(var_difference_from_target / target_var)) > 0.05:
+                ##too much exposure
+                num_to_close = round(float(var_difference_from_target / self.var_per_contract))
+            elif (float(var_difference_from_target / target_var)) < -0.05:
+                ##too little exposure
+                num_to_open = 0
+                num_to_open = round(float(-var_difference_from_target / self.var_per_contract))
+                recommendations.append(self.open(num_to_open, self.next_options_friday))
+            else:
+                recommendations.append('there is 5 or less trading days to expiration and all is well.')
+
         return recommendations
 
-    def increase_var_to_current(self, amt=0.05):
-        if int(self.trading_days_until_current_expir) > 15:
-            target_expir = self.current_options_friday
-        else:
-            target_expir = self.next_options_friday
-        target_var_to_increase = self.liquidation_value*amt
-        num_contracts = round(float(target_var_to_increase / self.var_per_contract))
+    def open(self, num_contracts, target_expir):
 
         strike1 = calculate_strike('P', self.spy_price, self.vix_price, self.z_score)
         strike2 = strike1 - self.options_spread
         strike1 = int(strike1)
         strike2 = int(strike2)
         #trade execution
-        #self.execution.short(num_contracts, target_expir, strike1, strike2)
+        self.execution.short(num_contracts, target_expir, strike1, strike2)
 
         return 'short ' + str(num_contracts) + ' contracts, expiring on ' + str(target_expir) + ' struck at ' + str(strike1) + ' and ' + str(strike2)
 
-    # def close_var_to_current(self, amt=0.05):
-    #     #close 5% var in current expir
-    #     #need a notion of trade date from order history to close the last contract
-    #     #could use spy direction to infer
-    #     target_var_to_close = self.current_var*amt
-    #     num_contracts = int(target_var_to_increase / self.var_per_contract)
-    #
-    #     #trade execution
-    #     self.execution.close(num_contracts, self.current_options_friday)
-    #
-    #     return 'close_var_to_current: ' + 'buy back ' + str(num_contracts) + ' contracts, expiring on ' + str(self.current_options_friday)
+    def close(self, num_contracts, target_expir):
+        #trade execution
+        self.execution.close(num_contracts, target_expir)
 
-    def roll_var_to_next(self, amt=0.05):
-        #close 5% var in current expir
-        #open 5% var in next expir
-        target_var_to_roll = self.liquidation_value * amt
-        num_contracts = round(float(target_var_to_roll / self.var_per_contract))
-
-        #self.execution.close(num_contracts, self.current_options_friday)
-        target_expir = self.next_options_friday
-        strike1 = calculate_strike('P', self.spy_price, self.vix_price, self.z_score)
-        strike2 = strike1 - self.options_spread
-        strike1 = int(strike1)
-        strike2 = int(strike2)
-
-        #self.execution.short(num_contracts, target_expir, strike1, strike2)
-
-        return 'roll_var_to_next: ' + 'roll ' + str(num_contracts) + ' number of contracts from ' + str(self.current_options_friday) + ' to ' + str(self.next_options_friday) + ' with spread ' + str(self.options_spread)
+        return 'close_var: ' + 'buy back ' + str(num_contracts) + ' contracts, expiring on ' + str(self.current_options_friday)
