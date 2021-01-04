@@ -3,7 +3,7 @@ from datetime import datetime
 from dateutil import parser
 
 from emailer import send_message
-
+import time
 
 class Execution:
     def __init__(self, headers):
@@ -412,6 +412,8 @@ class Execution:
                             + "Sincerely,\n" \
                             + "K.M.T."
                         to_email = "jacob@roboflow.ai"
+
+                        time.sleep(2)
 
                         return 'success'
 
