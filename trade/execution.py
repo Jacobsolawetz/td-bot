@@ -403,7 +403,7 @@ class Execution:
                                 }
 
                     sell_result = self.place_order(payload)
-                    if buy_result.status_code in [200, 201]:
+                    if sell_result.status_code in [200, 201]:
                         print('close successful')
 
                         message = "Subject: Purchase Executed: " + str(num_contracts) + " Number of Contracts" + "\n\n" \
@@ -415,10 +415,11 @@ class Execution:
 
                         time.sleep(2)
 
-                        return 'success'
-
-            print('close failed ')
-            return 'failure'
+            if sell_result.status_code in [200, 201]:
+                return 'success'
+            else:
+                print('close failed ')
+                return 'failure'
 
     def short(self, num_contracts, target_expir, strike1, strike2):
 
