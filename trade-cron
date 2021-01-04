@@ -1,1 +1,1 @@
-0 10 * * * . $HOME/.profile; /usr/local/bin/python3 /app/trade.py > /proc/1/fd/1 2>/proc/1/fd/2
+0 16 * * * . $HOME/.profile; /usr/local/bin/python3 /app/trade.py > /proc/1/fd/1 2>/proc/1/fd/2
