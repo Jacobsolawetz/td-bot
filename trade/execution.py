@@ -215,6 +215,7 @@ class Execution:
         return var_amount
 
     def get_close_orders(self, symbol_start, num_contracts):
+        num_contracts = float(num_contracts)
         ####
         #returns list of positions to close for symbol number of contracts
         ####
@@ -264,11 +265,13 @@ class Execution:
                             o['transactionItem']['amount'] -= c_amount
                             c['transactionItem']['amount'] -= c_amount
 
+
         still_open = []
 
         for o in opening:
           if o['transactionItem']['amount'] > 0:
             still_open.append(o)
+
 
         #oldest listed first
         still_open = sorted(still_open, key=lambda k: parser.parse(k['transactionDate']))
@@ -285,7 +288,6 @@ class Execution:
 
         #assumtpiton, spread orders will always be ordered in pairs, as execution logic executes sequentially by day
         for o in still_open:
-
             if ((num_contracts == 0) & (current_order['strike1'] != "") & (current_order['strike2'] != "")) :
                 break
 
@@ -302,10 +304,12 @@ class Execution:
                     amount_to_close = o_amount
                 else:
                     amount_to_close = num_contracts
+                #print(amount_to_close)
                 current_order['num_contracts'] = amount_to_close
-                num_contracts -= amount_to_close
+
 
                 if ((current_order['strike1'] != "") & (current_order['strike2'] != "")):
+                    num_contracts -= current_order['num_contracts']
                     close_list.append(current_order)
                     current_order = {
                         "strike1": "",
@@ -316,6 +320,7 @@ class Execution:
                 current_order['strike2'] = o_symbol
 
                 if ((current_order['strike1'] != "") & (current_order['strike2'] != "")):
+                    num_contracts -= current_order['num_contracts']
                     close_list.append(current_order)
                     current_order = {
                         "strike1": "",
