@@ -8,7 +8,7 @@ RUN pip3 install scipy
 
 RUN apt-get update && apt-get -y install cron
 
-#overwrite during build or pass in at runtime
+#pass in at runtime
 ENV REFRESH_TOKEN='YOUR_TOKEN_HERE'
 ENV CLIENT_ID='YOUR_CLIENT_ID_HERE'
 ENV SEND_EMAIL='kaermorhentreasury@gmail.com'
